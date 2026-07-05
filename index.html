@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roomies Book Club &mdash; Date Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Domine:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --desk: #22372c;          /* library desk green */
+    --desk-deep: #1a2b22;
+    --card: #f1e8cf;          /* manila circulation card */
+    --card-edge: #d9caa2;
+    --rule: #c5b487;          /* ruled lines on the card */
+    --ink: #2a333c;           /* typewriter ink */
+    --ink-faded: #8d8368;
+    --stamp-green: #2f6c4f;
+    --stamp-red: #a73b2a;
+    --stamp-amber: #96660f;
+    --focus: #2f6c4f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--desk);
+    background-image: radial-gradient(ellipse at 50% -10%, #2c4638 0%, var(--desk) 55%, var(--desk-deep) 100%);
+    min-height: 100vh;
+    font-family: 'Courier Prime', monospace;
+    color: var(--ink);
+    padding: 28px 12px 60px;
+  }
+
+  .plate {
+    text-align: center;
+    color: #cdbf9a;
+    font-size: 12px;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .plate::before, .plate::after { content: " \2014 "; opacity: .5; }
+
+  .card {
+    max-width: 880px;
+    margin: 0 auto;
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-radius: 4px;
+    box-shadow: 0 14px 40px rgba(0,0,0,.45), 0 2px 0 #fff inset;
+    padding: 26px clamp(14px, 4vw, 40px) 34px;
+    position: relative;
+  }
+  /* punched hole, like a real circulation card */
+  .card::before {
+    content: "";
+    position: absolute;
+    top: 16px; left: 50%;
+    transform: translateX(-50%);
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--desk);
+    box-shadow: 0 1px 0 #fff, 0 -1px 2px rgba(0,0,0,.4) inset;
+  }
+
+  header { text-align: center; padding-top: 26px; border-bottom: 2px solid var(--ink); padding-bottom: 18px; }
+  .masthead {
+    font-family: 'Domine', serif;
+    font-weight: 700;
+    font-size: clamp(20px, 4vw, 26px);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    border-bottom: 1.5px solid var(--ink);
+    display: inline-block;
+    padding: 0 14px 8px;
+    margin-bottom: 12px;
+  }
+  .eyebrow { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-faded); }
+  .cover {
+    display: none;
+    margin: 16px auto 4px;
+    max-width: 170px;
+    width: 45%;
+    border: 3px solid #fbf6e6;
+    border-radius: 2px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.35);
+    transform: rotate(-1.5deg);
+  }
+  h1.book {
+    font-family: 'Domine', serif;
+    font-weight: 700;
+    font-size: clamp(26px, 5vw, 40px);
+    line-height: 1.15;
+    margin: 6px 0 2px;
+  }
+  .author { font-family: 'Domine', serif; font-style: italic; font-size: 16px; color: #4a5560; }
+  .timenote { margin-top: 8px; font-size: 13px; color: var(--ink-faded); }
+
+  .stamp {
+    display: inline-block;
+    font-family: 'Courier Prime', monospace;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    border: 2px solid currentColor;
+    border-radius: 3px;
+    padding: 1px 7px;
+    transform: rotate(-2.5deg);
+    opacity: .92;
+  }
+
+  /* ---- identity picker ---- */
+  .whoami { margin: 22px 0 6px; text-align: center; }
+  .whoami .q { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faded); margin-bottom: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .chip {
+    font-family: 'Courier Prime', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    background: transparent;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    padding: 6px 16px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .chip:hover { background: rgba(42,51,60,.08); }
+  .chip.me { background: var(--ink); color: var(--card); }
+  .chip:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 3px solid var(--focus); outline-offset: 2px;
+  }
+
+  .hint { text-align: center; font-size: 13px; color: var(--ink-faded); margin-top: 10px; }
+
+  /* ---- progress / consensus ---- */
+  .status-line { text-align: center; margin: 18px 0 4px; font-size: 14px; }
+  .consensus {
+    margin: 14px auto 0;
+    max-width: 640px;
+    text-align: center;
+    border-top: 1px dashed var(--rule);
+    border-bottom: 1px dashed var(--rule);
+    padding: 12px 8px;
+  }
+  .consensus .label { font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faded); margin-bottom: 8px; }
+  .consensus .dates { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .win { color: var(--stamp-green); transform: rotate(-2deg); font-size: 13px; }
+  .lead { color: var(--stamp-amber); transform: rotate(1.5deg); font-size: 13px; border-style: dashed; }
+
+  /* ---- weekly grids ---- */
+  .week { margin-top: 26px; }
+  .week-title { font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-faded); margin-bottom: 8px; }
+  table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+  th, td { border-bottom: 1px solid var(--rule); }
+  th.namecol, td.namecol { width: 30%; text-align: left; padding: 8px 6px 8px 2px; }
+  thead th { font-size: 12px; padding: 4px 2px 8px; font-weight: 700; }
+  thead .dow { display: block; letter-spacing: .12em; color: var(--ink-faded); font-weight: 400; font-size: 10px; text-transform: uppercase; }
+  td.cell { text-align: center; padding: 5px 2px; }
+
+  .mark {
+    width: 40px; height: 36px;
+    max-width: 100%;
+    border: 1.5px dashed var(--rule);
+    border-radius: 4px;
+    background: transparent;
+    font-family: 'Courier Prime', monospace;
+    font-weight: 700;
+    font-size: 17px;
+    color: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mark.good  { border: 2px solid var(--stamp-green); color: var(--stamp-green); transform: rotate(-2deg); }
+  .mark.bad   { border: 2px solid var(--stamp-red);   color: var(--stamp-red);   transform: rotate(2deg); }
+  .mark.maybe { border: 2px solid var(--stamp-amber); color: var(--stamp-amber); transform: rotate(-1deg); }
+  td.mine .mark { cursor: pointer; border-style: solid; border-color: var(--ink-faded); }
+  td.mine .mark.good { border-color: var(--stamp-green); }
+  td.mine .mark.bad { border-color: var(--stamp-red); }
+  td.mine .mark.maybe { border-color: var(--stamp-amber); }
+  td.mine .mark:hover { box-shadow: 0 0 0 3px rgba(42,51,60,.12); }
+  tr.mine-row td { background: rgba(47,108,79,.06); }
+
+  .name { font-weight: 700; font-size: 14px; }
+  .name .tag { display: block; margin-top: 3px; }
+  .tag-replied { color: var(--stamp-green); font-size: 10px; }
+  .tag-waiting { color: var(--ink-faded); font-size: 10px; border-style: dashed; opacity: .75; }
+  .roomie-note { display: block; font-size: 11px; color: var(--ink-faded); font-style: italic; margin-top: 3px; overflow-wrap: anywhere; }
+
+  /* ---- my controls ---- */
+  .mypanel {
+    margin: 26px auto 0;
+    max-width: 640px;
+    border: 1.5px solid var(--ink);
+    border-radius: 6px;
+    padding: 16px;
+    text-align: center;
+    background: rgba(255,255,255,.28);
+  }
+  .mypanel .legend { font-size: 12px; color: var(--ink-faded); margin-bottom: 12px; line-height: 1.6; }
+  .legend b.g { color: var(--stamp-green); } .legend b.r { color: var(--stamp-red); } .legend b.a { color: var(--stamp-amber); }
+  .comment-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .comment-row input {
+    font-family: 'Courier Prime', monospace;
+    font-size: 14px;
+    padding: 8px 10px;
+    border: 1.5px solid var(--ink-faded);
+    border-radius: 4px;
+    background: #fbf6e6;
+    width: min(360px, 90%);
+  }
+  .btn {
+    font-family: 'Courier Prime', monospace;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 10px 22px;
+    border-radius: 4px;
+    border: 2px solid var(--stamp-green);
+    color: var(--stamp-green);
+    background: transparent;
+    cursor: pointer;
+    transform: rotate(-1deg);
+  }
+  .btn:hover { background: rgba(47,108,79,.1); }
+  .btn.done { background: var(--stamp-green); color: var(--card); }
+  .savenote { font-size: 12px; color: var(--ink-faded); margin-top: 10px; min-height: 15px; }
+
+  /* ---- empty state ---- */
+  .empty { text-align: center; padding: 40px 10px; color: var(--ink-faded); font-size: 15px; line-height: 1.7; }
+
+  /* ---- organizer ---- */
+  details.organizer { margin-top: 40px; border-top: 2px solid var(--ink); padding-top: 14px; }
+  details.organizer summary {
+    cursor: pointer;
+    font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-faded);
+    list-style: none;
+  }
+  details.organizer summary::before { content: "\25B8 "; }
+  details.organizer[open] summary::before { content: "\25BE "; }
+  .org-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .org-grid label { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faded); display: block; margin-bottom: 4px; }
+  .org-grid input, .org-grid select {
+    width: 100%;
+    font-family: 'Courier Prime', monospace;
+    font-size: 14px;
+    padding: 8px;
+    border: 1.5px solid var(--ink-faded);
+    border-radius: 4px;
+    background: #fbf6e6;
+  }
+  .org-full { grid-column: 1 / -1; }
+  .datechips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .datechip {
+    font-family: 'Courier Prime', monospace;
+    font-size: 12px;
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    background: transparent;
+    padding: 4px 8px;
+    cursor: pointer;
+  }
+  .datechip.off { opacity: .35; text-decoration: line-through; border-style: dashed; }
+  .org-actions { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+  .org-actions .check { font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .btn.red { border-color: var(--stamp-red); color: var(--stamp-red); }
+  .btn.red:hover { background: rgba(167,59,42,.08); }
+
+  footer { text-align: center; margin-top: 26px; font-size: 11px; color: #b9ab84; letter-spacing: .1em; }
+
+  @media (max-width: 560px) {
+    body { padding: 16px 6px 40px; }
+    .card { padding-left: 8px; padding-right: 8px; }
+    th.namecol, td.namecol { width: 26%; padding-left: 4px; }
+    .name { font-size: 12px; }
+    .mark { width: 100%; height: 34px; font-size: 15px; }
+    thead th { font-size: 11px; }
+    .org-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="plate">Date Finder</div>
+
+<div class="card">
+  <header>
+    <div class="masthead">Roomies Book Group</div>
+    <div class="eyebrow">This Month&rsquo;s Selection</div>
+    <h1 class="book" id="bookTitle">&nbsp;</h1>
+    <div class="author" id="bookAuthor"></div>
+    <img class="cover" id="coverImg" alt="Book cover">
+    <div class="timenote" id="timeNote"></div>
+  </header>
+
+  <div class="whoami">
+    <div class="q">Who are you? Tap your name.</div>
+    <div class="chips" id="nameChips"></div>
+    <div class="hint" id="pickHint"></div>
+  </div>
+
+  <div class="status-line" id="progressLine"></div>
+  <div class="consensus" id="consensus" hidden>
+    <div class="label">Front-runners</div>
+    <div class="dates" id="consensusDates"></div>
+  </div>
+
+  <div id="gridArea"></div>
+
+  <div class="mypanel" id="myPanel" hidden>
+    <div class="legend">
+      Tap a square in <b>your row</b> to cycle:
+      blank &rarr; <b class="g">&#10003; good</b> &rarr; <b class="r">&#10007; not good</b> &rarr; <b class="a">? maybe</b> &rarr; blank.
+      Changes save automatically.
+    </div>
+    <div class="comment-row">
+      <input id="commentInput" maxlength="200" placeholder="Standing note, e.g. &quot;Not Fridays&quot;" aria-label="Standing note">
+    </div>
+    <button class="btn" id="doneBtn">I&rsquo;m done</button>
+    <div class="savenote" id="saveNote"></div>
+  </div>
+
+  <details class="organizer">
+    <summary>Organizer tools (Mark)</summary>
+    <div class="org-grid">
+      <div class="org-full">
+        <label for="orgBook">Book title</label>
+        <input id="orgBook" maxlength="120">
+      </div>
+      <div>
+        <label for="orgAuthor">Author</label>
+        <input id="orgAuthor" maxlength="120">
+      </div>
+      <div>
+        <label for="orgNote">Time note</label>
+        <input id="orgNote" maxlength="120">
+      </div>
+      <div>
+        <label for="orgStart">First week (pick any day in it)</label>
+        <input id="orgStart" type="date">
+      </div>
+      <div>
+        <label for="orgWeeks">Number of weeks</label>
+        <select id="orgWeeks">
+          <option>1</option><option>2</option><option>3</option>
+          <option selected>4</option><option>5</option><option>6</option>
+        </select>
+      </div>
+      <div class="org-full">
+        <label>Candidate dates (weekdays &mdash; tap to knock out holidays)</label>
+        <div class="datechips" id="orgDates"></div>
+      </div>
+      <div class="org-full">
+        <label for="orgRoster">Roomies (comma-separated)</label>
+        <input id="orgRoster" maxlength="300">
+      </div>
+      <div class="org-actions">
+        <button class="btn" id="publishBtn">Publish month</button>
+        <label class="check"><input type="checkbox" id="clearResp" checked> Clear everyone&rsquo;s replies (new month)</label>
+      </div>
+      <div class="org-full savenote" id="orgNoteLine"></div>
+    </div>
+  </details>
+</div>
+
+<footer>ROOMIES BOOK GROUP &middot; ONE CARD &middot; ONE GOOD EVENING</footer>
+
+<script>
+(() => {
+  const API = "/api/data";
+  let state = null;
+  let me = localStorage.getItem("roomie-name") || null;
+  let saveTimer = null;
+  let lastEdit = 0;
+
+  const $ = (id) => document.getElementById(id);
+  const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  const parseISO = (iso) => {
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  };
+  const toISO = (d) =>
+    d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const fmtShort = (iso) => { const d = parseISO(iso); return MON[d.getMonth()] + " " + d.getDate(); };
+  const fmtDow = (iso) => DOW[parseISO(iso).getDay()];
+
+  function myResponse() {
+    if (!me || !state) return null;
+    if (!state.responses[me]) state.responses[me] = { statuses: {}, comment: "", done: false };
+    return state.responses[me];
+  }
+
+  // ---------- rendering ----------
+  function render() {
+    if (!state) return;
+    const m = state.month;
+
+    $("bookTitle").textContent = m.book || "No book posted yet";
+    $("bookAuthor").textContent = m.author ? "by " + m.author : "";
+    $("timeNote").textContent = m.note || "";
+
+    // name chips
+    const chips = $("nameChips");
+    chips.innerHTML = "";
+    m.roster.forEach((name) => {
+      const b = document.createElement("button");
+      b.className = "chip" + (name === me ? " me" : "");
+      b.textContent = name;
+      b.onclick = () => {
+        me = name;
+        localStorage.setItem("roomie-name", name);
+        render();
+      };
+      chips.appendChild(b);
+    });
+    $("pickHint").textContent = me
+      ? "Marking dates as " + me + ". Not you? Tap the right name."
+      : "Pick your name to fill in your dates.";
+
+    // progress
+    const replied = m.roster.filter((r) => state.responses[r] && state.responses[r].done);
+    $("progressLine").innerHTML = m.dates.length
+      ? "<span class='stamp " + (replied.length === m.roster.length ? "win" : "lead") + "'>" +
+        replied.length + " of " + m.roster.length + " replied</span>"
+      : "";
+
+    renderConsensus(replied);
+    renderGrid();
+
+    // my panel
+    const panel = $("myPanel");
+    if (me && m.dates.length) {
+      panel.hidden = false;
+      const r = myResponse();
+      if (document.activeElement !== $("commentInput")) $("commentInput").value = r.comment || "";
+      const btn = $("doneBtn");
+      btn.className = "btn" + (r.done ? " done" : "");
+      btn.innerHTML = r.done ? "Replied &#10003; (tap to reopen)" : "I&rsquo;m done";
+    } else {
+      panel.hidden = true;
+    }
+
+    // grid area empty state
+    if (!m.dates.length) {
+      $("gridArea").innerHTML =
+        "<div class='empty'>No dates posted yet for this month.<br>" +
+        "Mark: open <b>Organizer tools</b> below to set the book and candidate dates.</div>";
+    }
+  }
+
+  function renderConsensus(replied) {
+    const m = state.month;
+    const box = $("consensus");
+    if (!m.dates.length || replied.length === 0) { box.hidden = true; return; }
+
+    const wins = [], leads = [];
+    for (const date of m.dates) {
+      let good = 0, bad = 0;
+      for (const r of m.roster) {
+        const s = state.responses[r] && state.responses[r].statuses[date];
+        if (s === "good") good++;
+        else if (s === "bad") bad++;
+      }
+      if (bad > 0) continue;
+      if (good === m.roster.length) wins.push(date);
+      else if (good >= Math.min(3, m.roster.length)) leads.push({ date, good });
+    }
+    if (!wins.length && !leads.length) { box.hidden = true; return; }
+    box.hidden = false;
+    const wrap = $("consensusDates");
+    wrap.innerHTML = "";
+    wins.forEach((d) => {
+      const s = document.createElement("span");
+      s.className = "stamp win";
+      s.textContent = fmtDow(d) + " " + fmtShort(d) + " \u2014 works for all";
+      wrap.appendChild(s);
+    });
+    leads.sort((a, b) => b.good - a.good).slice(0, 4).forEach(({ date, good }) => {
+      const s = document.createElement("span");
+      s.className = "stamp lead";
+      s.textContent = fmtDow(date) + " " + fmtShort(date) + " \u2014 " + good + " good, none against";
+      wrap.appendChild(s);
+    });
+  }
+
+  function weeksOf(dates) {
+    // group consecutive dates into Mon-Sun weeks
+    const weeks = [];
+    let cur = [], curKey = null;
+    for (const iso of dates) {
+      const d = parseISO(iso);
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+      const key = toISO(monday);
+      if (key !== curKey) { if (cur.length) weeks.push(cur); cur = []; curKey = key; }
+      cur.push(iso);
+    }
+    if (cur.length) weeks.push(cur);
+    return weeks;
+  }
+
+  function renderGrid() {
+    const m = state.month;
+    const area = $("gridArea");
+    if (!m.dates.length) { area.innerHTML = ""; return; }
+    area.innerHTML = "";
+
+    const glyph = { good: "\u2713", bad: "\u2717", maybe: "?" };
+
+    weeksOf(m.dates).forEach((week) => {
+      const sec = document.createElement("div");
+      sec.className = "week";
+      const first = week[0], last = week[week.length - 1];
+      const title = document.createElement("div");
+      title.className = "week-title";
+      title.textContent = "Week of " + fmtShort(first) + (week.length > 1 ? " \u2013 " + fmtShort(last) : "");
+      sec.appendChild(title);
+
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const hr = document.createElement("tr");
+      hr.innerHTML = "<th class='namecol'></th>" + week.map((d) =>
+        "<th><span class='dow'>" + fmtDow(d) + "</span>" + fmtShort(d) + "</th>"
+      ).join("");
+      thead.appendChild(hr);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      m.roster.forEach((name) => {
+        const resp = state.responses[name];
+        const tr = document.createElement("tr");
+        if (name === me) tr.className = "mine-row";
+
+        const td = document.createElement("td");
+        td.className = "namecol";
+        const done = resp && resp.done;
+        td.innerHTML =
+          "<span class='name'>" + esc(name) +
+          "<span class='tag'><span class='stamp " + (done ? "tag-replied" : "tag-waiting") + "'>" +
+          (done ? "replied \u2713" : "awaiting") + "</span></span>" +
+          (resp && resp.comment ? "<span class='roomie-note'>&ldquo;" + esc(resp.comment) + "&rdquo;</span>" : "") +
+          "</span>";
+        tr.appendChild(td);
+
+        week.forEach((date) => {
+          const cell = document.createElement("td");
+          cell.className = "cell" + (name === me ? " mine" : "");
+          const status = resp && resp.statuses[date];
+          const mark = document.createElement(name === me ? "button" : "span");
+          mark.className = "mark" + (status ? " " + status : "");
+          mark.textContent = status ? glyph[status] : "\u00b7";
+          if (name === me) {
+            mark.setAttribute("aria-label", fmtDow(date) + " " + fmtShort(date) + ": " + (status || "blank"));
+            mark.onclick = () => cycle(date);
+          }
+          cell.appendChild(mark);
+          tr.appendChild(cell);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      sec.appendChild(table);
+      area.appendChild(sec);
+    });
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  // ---------- my actions ----------
+  const CYCLE = { undefined: "good", good: "bad", bad: "maybe", maybe: undefined };
+
+  function cycle(date) {
+    const r = myResponse();
+    if (!r) return;
+    const next = CYCLE[r.statuses[date]];
+    if (next) r.statuses[date] = next; else delete r.statuses[date];
+    lastEdit = Date.now();
+    render();
+    queueSave();
+  }
+
+  function queueSave() {
+    $("saveNote").textContent = "saving\u2026";
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveMine, 600);
+  }
+
+  async function saveMine() {
+    const r = myResponse();
+    if (!r) return;
+    try {
+      const res = await fetch(API, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: "response", name: me, statuses: r.statuses, comment: r.comment || "", done: r.done }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      state = await res.json();
+      $("saveNote").textContent = "saved \u2713";
+      render();
+    } catch (err) {
+      $("saveNote").textContent = "couldn\u2019t save \u2014 check connection and tap a square again";
+      console.error(err);
+    }
+  }
+
+  // ---------- organizer ----------
+  let orgDateSet = new Set();
+
+  function genOrgDates() {
+    const startVal = $("orgStart").value;
+    const weeks = Number($("orgWeeks").value);
+    const wrap = $("orgDates");
+    wrap.innerHTML = "";
+    if (!startVal) return;
+    const start = parseISO(startVal);
+    const monday = new Date(start);
+    monday.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    orgDateSet = new Set();
+    for (let w = 0; w < weeks; w++) {
+      for (let d = 0; d < 5; d++) {
+        const day = new Date(monday);
+        day.setDate(monday.getDate() + w * 7 + d);
+        const iso = toISO(day);
+        orgDateSet.add(iso);
+        const b = document.createElement("button");
+        b.className = "datechip";
+        b.textContent = fmtDow(iso) + " " + fmtShort(iso);
+        b.onclick = () => {
+          if (orgDateSet.has(iso)) { orgDateSet.delete(iso); b.classList.add("off"); }
+          else { orgDateSet.add(iso); b.classList.remove("off"); }
+        };
+        wrap.appendChild(b);
+      }
+    }
+  }
+
+  async function publish() {
+    const dates = [...orgDateSet].sort();
+    if (!dates.length) { $("orgNoteLine").textContent = "Pick a first week to generate dates."; return; }
+    const roster = $("orgRoster").value.split(",").map((s) => s.trim()).filter(Boolean);
+    const month = {
+      book: $("orgBook").value.trim(),
+      author: $("orgAuthor").value.trim(),
+      note: $("orgNote").value.trim(),
+      dates,
+      roster: roster.length ? roster : state.month.roster,
+    };
+    $("orgNoteLine").textContent = "publishing\u2026";
+    try {
+      const res = await fetch(API, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: "setup", month, clearResponses: $("clearResp").checked }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      state = await res.json();
+      $("orgNoteLine").textContent = "published \u2713 \u2014 send the roomies the link";
+      render();
+    } catch (err) {
+      $("orgNoteLine").textContent = "couldn\u2019t publish \u2014 try again";
+      console.error(err);
+    }
+  }
+
+  function fillOrganizer() {
+    const m = state.month;
+    $("orgBook").value = m.book || "";
+    $("orgAuthor").value = m.author || "";
+    $("orgNote").value = m.note || "";
+    $("orgRoster").value = m.roster.join(", ");
+  }
+
+  // ---------- wiring ----------
+  // cover image: shows only if a cover.jpg sits next to this page
+  {
+    const img = $("coverImg");
+    img.onload = () => { img.style.display = "block"; };
+    img.onerror = () => { img.style.display = "none"; };
+    img.src = "cover.jpg";
+  }
+
+  $("commentInput").addEventListener("input", () => {
+    const r = myResponse();
+    if (!r) return;
+    r.comment = $("commentInput").value;
+    lastEdit = Date.now();
+    queueSave();
+  });
+
+  $("doneBtn").addEventListener("click", () => {
+    const r = myResponse();
+    if (!r) return;
+    r.done = !r.done;
+    lastEdit = Date.now();
+    render();
+    clearTimeout(saveTimer);
+    saveMine();
+  });
+
+  $("orgStart").addEventListener("change", genOrgDates);
+  $("orgWeeks").addEventListener("change", genOrgDates);
+  $("publishBtn").addEventListener("click", publish);
+
+  async function loadState(first) {
+    try {
+      const res = await fetch(API);
+      if (!res.ok) throw new Error(await res.text());
+      state = await res.json();
+      if (first) fillOrganizer();
+      render();
+    } catch (err) {
+      $("gridArea").innerHTML = "<div class='empty'>Couldn\u2019t reach the card catalog. Refresh to try again.</div>";
+      console.error(err);
+    }
+  }
+
+  // gentle polling so everyone sees fresh replies; pause while actively editing
+  setInterval(() => {
+    if (Date.now() - lastEdit > 8000 && document.visibilityState === "visible") loadState(false);
+  }, 45000);
+
+  loadState(true);
+})();
+</script>
+</body>
+</html>
