@@ -24,7 +24,11 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
+  body {<!-- hidden form: lets Netlify email the organizer when all roomies reply -->
+<form name="all-replied" netlify hidden>
+  <input type="text" name="book">
+  <input type="text" name="message">
+</form>
     background: var(--desk);
     background-image: radial-gradient(ellipse at 50% -10%, #2c4638 0%, var(--desk) 55%, var(--desk-deep) 100%);
     min-height: 100vh;
