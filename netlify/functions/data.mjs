@@ -59,6 +59,16 @@ export default async (req) => {
         done: Boolean(body.done),
         updated: new Date().toISOString(),
       };
+      // notify the organizer the moment the last roomie replies
+      const allDone =
+        state.month.roster.length > 0 &&
+        state.month.roster.every((r) => state.responses[r] && state.responses[r].done);
+      if (allDone && !state.completeNotified) {
+        state.completeNotified = true;
+        try { await notifyComplete(state); } catch (e) { console.error("notify failed", e); }
+      } else if (!allDone) {
+        state.completeNotified = false;
+      }
     } else if (body.type === "setup" && body.month) {
       const m = body.month;
       state.month = {
@@ -70,7 +80,10 @@ export default async (req) => {
           ? m.roster.map((r) => String(r).slice(0, 40)).slice(0, 12)
           : state.month.roster,
       };
-      if (body.clearResponses) state.responses = {};
+      if (body.clearResponses) {
+        state.responses = {};
+        state.completeNotified = false;
+      }
     } else {
       return new Response("Bad request", { status: 400 });
     }
@@ -81,5 +94,45 @@ export default async (req) => {
 
   return new Response("Method not allowed", { status: 405 });
 };
+
+async function notifyComplete(state) {
+  const { roster, dates, book } = state.month;
+  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const label = (iso) => {
+    const [y, m, d] = iso.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    return DOW[dt.getDay()] + " " + MON[dt.getMonth()] + " " + dt.getDate();
+  };
+  const statusOf = (r, d) =>
+    state.responses[r] && state.responses[r].statuses[d];
+
+  const worksForAll = dates.filter((d) => roster.every((r) => statusOf(r, d) === "good"));
+  const clean = dates
+    .map((d) => ({
+      d,
+      good: roster.filter((r) => statusOf(r, d) === "good").length,
+      hasBad: roster.some((r) => statusOf(r, d) === "bad"),
+    }))
+    .filter((x) => !x.hasBad && x.good > 0)
+    .sort((a, b) => b.good - a.good);
+
+  let message = "All " + roster.length + " roomies have replied for \"" + book + "\".\n\n";
+  if (worksForAll.length) {
+    message += "Works for everyone: " + worksForAll.map(label).join(", ");
+  } else if (clean.length) {
+    message += "No date works for all. Best options (good votes, no objections): " +
+      clean.slice(0, 5).map((x) => label(x.d) + " (" + x.good + " good)").join(", ");
+  } else {
+    message += "Every date has at least one objection - check the grid.";
+  }
+
+  // file a Netlify Forms submission; Netlify emails the organizer
+  await fetch(process.env.URL + "/", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ "form-name": "all-replied", book, message }).toString(),
+  });
+}
 
 export const config = { path: "/api/data" };
